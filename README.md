@@ -213,10 +213,10 @@ python main.py
 
 Enter your choice: 2
 
-Username: ayush
+Username: username
 Password: ****
 
-Login successful! Welcome, ayush.
+Login successful! Welcome, username.
 
 =====================================
   MAIN MENU
