@@ -2,7 +2,7 @@
 
 A command-line book recommendation system built with Python and MySQL as a **Class 12 CBSE Computer Science project**. Users can browse, search, and receive book recommendations based on their genre preferences and reading history.
 
-> **Note:** This project is currently under development. Some features described below are planned and not yet implemented.
+> **Note:** This project is fully implemented and tested. Requires Python 3.8+ and MySQL 8.0+.
 
 ---
 
@@ -16,13 +16,12 @@ A command-line book recommendation system built with Python and MySQL as a **Cla
 - Add books to a personal reading list
 - Rate books on a scale of 1-5
 - Rule-based book recommendations based on genre preferences
-- CRUD operations on book data
-- Exception handling for database and input errors
+- Input validation and friendly error handling for database/connection issues
 
 ### Planned
 
+- Add, update, and delete books (complete CRUD / admin panel)
 - Book review and comment system
-- Admin panel for managing the book database
 - Export reading list to file
 - Advanced collaborative filtering recommendations
 
@@ -64,7 +63,7 @@ Recommendation: Unread books from Fiction and Science genres,
                 sorted by genre match score.
 ```
 
-> **Note:** The actual algorithm implementation may vary. This section will be updated once `main.py` is implemented.
+> **Note:** `main.py` implements exactly this logic, with a preferred-genre threshold of **3.0**.
 
 ---
 
@@ -83,8 +82,9 @@ Recommendation: Unread books from Fiction and Science genres,
 ```text
 Book-Recommendation-System/
 ├── main.py            # Main application entry point
-├── database.sql       # Database and table creation scripts
-├── requirements.txt   # Python dependencies (to be created)
+├── database.sql       # Creates database and tables (structure only)
+├── sample_data.sql    # Sample books (run once after database.sql)
+├── requirements.txt   # Python dependencies
 └── README.md          # Project documentation
 ```
 
@@ -99,18 +99,20 @@ The project uses a MySQL database named `book_recommendation_db` with the follow
 | Column | Type | Description |
 |---|---|---|
 | user_id | INT (PK, AUTO_INCREMENT) | Unique user identifier |
-| username | VARCHAR(50) | User's display name |
-| password | VARCHAR(100) | User's password |
+| username | VARCHAR(50) UNIQUE | User's display name |
+| password_hash | VARCHAR(255) | User's password (stored as entered) |
+| created_at | TIMESTAMP | Row creation time (auto-set) |
 
 ### `books`
 
 | Column | Type | Description |
 |---|---|---|
 | book_id | INT (PK, AUTO_INCREMENT) | Unique book identifier |
-| title | VARCHAR(100) | Book title |
-| author | VARCHAR(100) | Author name |
-| genre | VARCHAR(50) | Book genre |
-| description | TEXT | Brief book description |
+| title | VARCHAR(255) | Book title |
+| author | VARCHAR(255) | Author name |
+| genre | VARCHAR(100) | Book genre |
+| book_description | TEXT | Brief book description |
+| created_at | TIMESTAMP | Row creation time (auto-set) |
 
 ### `ratings`
 
@@ -119,17 +121,23 @@ The project uses a MySQL database named `book_recommendation_db` with the follow
 | rating_id | INT (PK, AUTO_INCREMENT) | Unique rating identifier |
 | user_id | INT (FK → users) | The user who rated |
 | book_id | INT (FK → books) | The book being rated |
-| rating | INT (1–5) | User's rating |
+| rating | INT (1–5, CHECK) | User's rating |
+| created_at | TIMESTAMP | Row creation time (auto-set) |
 
-### `reading_list`
+The app also prevents a user from rating the same book twice by checking with `SELECT` before inserting.
+
+### `reading_lists`
 
 | Column | Type | Description |
 |---|---|---|
 | list_id | INT (PK, AUTO_INCREMENT) | Unique entry identifier |
 | user_id | INT (FK → users) | The user |
 | book_id | INT (FK → books) | The book added |
+| created_at | TIMESTAMP | Row creation time (auto-set) |
 
-> **Note:** The actual schema will be finalized in `database.sql`. Columns and table names may change during implementation.
+A book can be added only once per user (`UNIQUE` on user_id + book_id).
+
+> **Note:** This schema matches `database.sql` exactly.
 
 ---
 
@@ -152,13 +160,28 @@ cd Book-Recommendation-System
 
 1. Open MySQL Workbench or the MySQL command line.
 
-2. Run the database setup script:
+2. Run the database setup script (creates the database and tables):
 
 ```bash
 mysql -u root -p < database.sql
 ```
 
-Or paste the contents of `database.sql` directly into MySQL Workbench.
+3. Run the sample data script (fills the books table — run **once**):
+
+```bash
+mysql -u root -p < sample_data.sql
+```
+
+Or paste the contents of both files directly into MySQL Workbench, `database.sql` first.
+
+> **Windows PowerShell note:** `<` (input redirection) is not supported in PowerShell. Use:
+> ```powershell
+> Get-Content database.sql | mysql -u root -p
+> Get-Content sample_data.sql | mysql -u root -p
+> ```
+> `database.sql` only creates tables that don't exist yet, so re-running it never
+> touches your users, ratings, or reading lists. Do **not** re-run `sample_data.sql`
+> on a database that already has the sample books (it would add duplicates).
 
 3. Verify the database was created:
 
@@ -169,15 +192,13 @@ SHOW TABLES;
 
 ### Step 3: Configure Database Credentials
 
-Update the database connection settings in `main.py` to match your MySQL setup:
+Update the database connection settings at the top of `main.py` to match your MySQL setup:
 
 ```python
-DB_CONFIG = {
-    "host": "localhost",
-    "user": "root",
-    "password": "your_mysql_password",
-    "database": "book_recommendation_db"
-}
+HOST = 'localhost'
+USER = 'root'
+PASSWORD = 'your_password'        # <-- put your MySQL password here
+DATABASE = 'book_recommendation_db'
 ```
 
 ### Step 4: Install Python Dependencies
@@ -186,7 +207,7 @@ DB_CONFIG = {
 pip install -r requirements.txt
 ```
 
-If `requirements.txt` is not yet created, install the dependency manually:
+If `requirements.txt` is missing, install the dependency manually:
 
 ```bash
 pip install mysql-connector-python
@@ -210,13 +231,12 @@ python main.py
 1. Register
 2. Login
 3. Exit
-
 Enter your choice: 2
 
-Username: username
-Password: ****
+Enter your username: alice
+Enter your password: ****
 
-Login successful! Welcome, username.
+Login successful! Welcome, alice.
 
 =====================================
   MAIN MENU
@@ -227,7 +247,7 @@ Login successful! Welcome, username.
 3. Rate a Book
 4. My Reading List
 5. Get Recommendations
-6. Logout
+6. Exit
 
 Enter your choice: 5
 

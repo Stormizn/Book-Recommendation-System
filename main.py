@@ -95,7 +95,7 @@ def login_menu(connection):
         print("=" * 40)
         print("1. Register")
         print("2. Login")
-        print("3. Back to Main Menu")
+        print("3. Exit")
         choice = get_int("Enter your choice (1-3): ", 1, 3)
 
         if choice == 1:
@@ -151,7 +151,7 @@ def search_books(connection):
 def rate_book(connection):
     """rates a book"""
     cursor = connection.cursor()
-    book_id = get_int("Enter the book ID to rate: ", 1, 200)
+    book_id = get_int("Enter the book ID to rate: ", 1, 1000)
 
     cursor.execute("SELECT title FROM books WHERE book_id = %s", (book_id,))
     row = cursor.fetchone()
@@ -190,7 +190,7 @@ def reading_list_menu(connection):
         rows = cursor.fetchall()
         display_books(rows)
     else:
-        book_id = get_int("Enter the book ID to add to your reading list: ", 1, 200)
+        book_id = get_int("Enter the book ID to add to your reading list: ", 1, 1000)
 
         cursor.execute("SELECT title FROM books WHERE book_id = %s", (book_id,))
         row = cursor.fetchone()
@@ -239,11 +239,11 @@ def get_recommendations(connection):
     preferred_genre = [] # genre rating >= 3.0
     for genre in genre_totals:
         avg_rating = genre_totals[genre] / genre_counts[genre]
-        if avg_rating >= 4:
+        if avg_rating >= 3:
             preferred_genre.append(genre)
 
     if len(preferred_genre) == 0:
-        print("You haven't rated any books with a high enough score to get recommendations! Please rate some books with a score of 4 or higher to get recommendations!")
+        print("You haven't rated any books with a high enough score to get recommendations! Please rate some books with a score of 3 or higher to get recommendations!")
         cursor.close()
         return
 
